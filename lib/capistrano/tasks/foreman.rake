@@ -14,6 +14,7 @@ namespace :foreman do
           set :foreman_log, -> { shared_path.join('log') }
           set :foreman_port, 3000 # default is not set
           set :foreman_user, 'www-data' # default is not set
+          set :foreman_use_sudo, true
     DESC
 
   task :setup do
@@ -23,6 +24,8 @@ namespace :foreman do
 
   desc "Export the Procfile to another process management format"
   task :export do
+    SSHKit.config.command_map.prefix[:foreman].unshift('sudo') if fetch(:foreman_use_sudo)
+
     on roles fetch(:foreman_roles) do
       execute :mkdir, "-p", fetch(:foreman_export_path) unless test "[ -d #{fetch(:foreman_export_path)} ]"
       within fetch(:foreman_target_path, release_path) do
@@ -66,6 +69,8 @@ end
 
 namespace :load do
   task :defaults do
+    set :bundle_bins, fetch(:bundle_bins, []).push('foreman')
+    set :foreman_use_sudo, fetch(:foreman_use_sudo, false)
     set :foreman_roles, :all
     set :foreman_export_format, 'upstart'
     set :foreman_export_path, '/etc/init'
